@@ -12,20 +12,14 @@ from dotmap import DotMap
 
 from verifai.client import Client
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--out', type=str, help='Image output directory.', default='verifai_out')
-
-args = parser.parse_args()
-
 NUM_CLASSES = 12
-OUT_DIR = args.out
 BACKGROUND = 'lighting/blue_white.png'
 IMAGENET_FILENAME = 'class_labels.json'
 VGG_PARAMS = {'mean': torch.tensor([0.6109, 0.7387, 0.7765]), 'std': torch.tensor([0.2715, 0.3066, 0.3395])}
 
 
 class Classifier(Client):
-    def __init__(self, classifier_data):
+    def __init__(self, classifier_data, out_dir):
         port = classifier_data.port
         bufsize = classifier_data.bufsize
         super().__init__(port, bufsize)
@@ -42,6 +36,7 @@ class Classifier(Client):
 
         self.cur_hashcode = None
         self.iters = 0
+        self.out_dir = out_dir
 
     def simulate(self, sample):
         print('The time is', datetime.datetime.now())
@@ -59,7 +54,7 @@ class Classifier(Client):
                 v_shape = v.shapes[i].vertices.shape
                 v.shapes[i].vertices += torch.tensor(sample._asdict()['mesh' + str(i)], device=pyredner.get_device()).reshape(v_shape)
             print('vertices added')
-            img = v.render_image(out_dir=OUT_DIR + '/' + sample.obj_id, 
+            img = v.render_image(out_dir=self.out_dir + '/' + sample.obj_id, 
                     filename=sample.hashcode + '_' + sample.pose + '_' + str(self.iters) + '.png', no_grad=True)
             print('img rendered')
             pred, out = v.classify(img)
@@ -71,6 +66,12 @@ class Classifier(Client):
             return res
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--out', type=str, help='Image output directory.', default='verifai_out')
+
+    args = parser.parse_args()
+    OUT_DIR = args.out
+
     PORT = 8888
     BUFSIZE = 4096 * 4
 

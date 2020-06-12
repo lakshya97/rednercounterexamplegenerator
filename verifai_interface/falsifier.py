@@ -62,7 +62,7 @@ falsifier_params.fal_thres = 0.5
 # Classifier client params:
 if FAKE_SERVER:
     classifier_data = DotMap()
-    client_task = Classifier(classifier_data)
+    client_task = Classifier(classifier_data, OUT_DIR)
 
 class confidence_spec(specification_monitor):
     def __init__(self):
@@ -87,7 +87,7 @@ for hashcode in hashcodes:
 
     _, mesh_list, _ = pyredner.load_obj(obj_filename)
 
-    features = {'euler_delta': Feature(Box([-.75, .75]))}
+    features = {'euler_delta': Feature(Box([-.3, .3]))}
     for i, name_mesh in enumerate(mesh_list):
         _, mesh = name_mesh
         features['mesh' + str(i)] = Feature(Array(Box((-.005, .005)), tuple(mesh.vertices.shape)))
