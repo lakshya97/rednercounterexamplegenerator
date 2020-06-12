@@ -5,6 +5,7 @@ import torchvision.models.vgg as vgg
 import argparse
 import os
 import time
+import datetime
 
 import numpy as np
 from dotmap import DotMap
@@ -43,6 +44,7 @@ class Classifier(Client):
         self.iters = 0
 
     def simulate(self, sample):
+        print('The time is', datetime.datetime.now())
         # For filename purposes, we reset self.iters to 0 with each new hashcode
         if not self.cur_hashcode or self.cur_hashcode != sample.hashcode:
             self.cur_hashcode = sample.hashcode
@@ -68,22 +70,23 @@ class Classifier(Client):
             self.iters += 1
             return res
 
-PORT = 8888
-BUFSIZE = 4096
+if __name__ == '__main__':
+    PORT = 8888
+    BUFSIZE = 4096 * 4
 
-classifier_data = DotMap()
-classifier_data.port = PORT
-classifier_data.bufsize = BUFSIZE
-client_task = Classifier(classifier_data)
-last_success = time.time()
-while True:
-    try:
-        client_task.run_client()
-        last_success = time.time()
-    except RuntimeError as e:
-        time.sleep(1)
-        # We assume if the falsifier hasn't sent anything in 60s, we are done.
-        if time.time() - last_success > 60:
-            print('End of all samples.')
-            break
+    classifier_data = DotMap()
+    classifier_data.port = PORT
+    classifier_data.bufsize = BUFSIZE
+    client_task = Classifier(classifier_data)
+    last_success = time.time()
+    while True:
+        try:
+            client_task.run_client()
+            last_success = time.time()
+        except RuntimeError as e:
+            time.sleep(1)
+            # We assume if the falsifier hasn't sent anything in 60s, we are done.
+            if time.time() - last_success > 60 * 60:
+                print('End of all samples.')
+                break
     
