@@ -2,17 +2,18 @@ from redner_adv import *
 import torch
 import torchvision.transforms as transforms
 import torchvision.models.vgg as vgg
+import numpy as np
+import pandas as pd
+from dotmap import DotMap
 import argparse
 import os
 import glob
+import time
 
 from verifai.features.features import *
 from verifai.samplers.feature_sampler import *
 from verifai.falsifier import generic_falsifier
 from verifai.monitor import specification_monitor
-
-import numpy as np
-from dotmap import DotMap
 
 from classif_client import Classifier
 from fake_server import FakeServer
@@ -77,8 +78,16 @@ else:
 
 total_misclassif = 0
 
-falsifier = None
+log_cols = ['Vertices', 'Read Time', 'Init Time', 'Sample Time', 'Render Time', 'Total Time']
+LOG_CSV = 'timelog.csv'
+
+if os.path.exists(LOG_CSV):
+    timelog = pd.read_csv(LOG_CSV)
+else:
+    timelog = pd.DataFrame([], columns=log_cols)
+
 for hashcode in hashcodes:
+    start_t = time.time()
     obj_filename  = '../ShapeNetCore.v2/' + OBJ_ID + '/' + hashcode + '/models/model_normalized.obj'
     out_filename = 'verifai_out/' + OBJ_ID + '/' + hashcode + '_' + POSE + '_*.png'
     if len(glob.glob(out_filename)) == 5:
@@ -86,6 +95,8 @@ for hashcode in hashcodes:
         continue
 
     _, mesh_list, _ = pyredner.load_obj(obj_filename)
+    read_t = time.time()
+    num_vertices = sum(name_mesh[1].vertices.shape[0] for name_mesh in mesh_list) 
 
     features = {'euler_delta': Feature(Box([-.3, .3]))}
     for i, name_mesh in enumerate(mesh_list):
@@ -109,12 +120,19 @@ for hashcode in hashcodes:
         sampler_params = DotMap(thres=falsifier_params.fal_thres)
         sampling_data = DotMap(sampler=sampler, sampler_params=sampler_params)
         falsifier.server = FakeServer(sampling_data, falsifier.monitor, client_task, options=server_options)
+    init_t = time.time()
     
-    rhos = falsifier.run_falsifier()
-    print(rhos)
+    rhos, sample_time, render_time = falsifier.run_falsifier()
+    print('Rhos', rhos)
     misclassif = np.sum(np.invert(rhos))
     print('Number of misclassifications:', misclassif)
     total_misclassif += misclassif
+
+    new_row = pd.DataFrame([[num_vertices, read_t - start_t, init_t - read_t, sample_time, render_time, time.time() - start_t]],
+            columns=log_cols)
+    print(new_row)
+    timelog = timelog.append(new_row)
+    timelog.to_csv(LOG_CSV)
 
 print('Total misclassification rate:', total_misclassif / (len(hashcodes) * MAX_ITERS))
 

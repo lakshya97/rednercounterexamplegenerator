@@ -1,4 +1,5 @@
 from verifai.server import Server
+import time
 
 # A fake server that bypasses the networking stuff.
 class FakeServer(Server):
@@ -43,6 +44,15 @@ class FakeServer(Server):
 
     def evaluate_sample(self, sample):
         return self.monitor.evaluate(self.task.simulate(sample))
+
+    def run_server(self):
+        t0 = time.time()
+        sample = self.get_sample(self.lastValue)
+        t1 = time.time()
+        self.lastValue = self.evaluate_sample(sample)
+        t2 = time.time()
+        # Returns tuple (sample, rho, sample time, simulate time)
+        return sample, self.lastValue, t1 - t0, t2 - t1
 
     def terminate(self):
         pass
