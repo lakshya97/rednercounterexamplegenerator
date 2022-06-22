@@ -1,6 +1,6 @@
 jsonschema==2.6.0
 matplotlib==3.2.1
-numpy==1.18.2
+numpy==1.22.0
 opencv-python==3.4.0.12
 Pillow==8.1.1
 PyQt5==5.14.2
